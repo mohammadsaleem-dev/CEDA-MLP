@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import mean_absolute_error, r2_score
+from sklearn.metrics import mean_absolute_error, r2_score, mean_squared_error
 from sklearn.linear_model import LinearRegression
 from sklearn.tree import DecisionTreeRegressor
 from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
@@ -30,7 +30,6 @@ cursor = conn.cursor()
 
 queries = [
 
-    # SIMPLE FILTERS
     "SELECT * FROM students WHERE gpa > 3.0",
     "SELECT * FROM students WHERE gpa < 2.5",
     "SELECT * FROM students WHERE city='Amman'",
@@ -40,20 +39,16 @@ queries = [
     "SELECT * FROM students WHERE gender='Male'",
     "SELECT * FROM students WHERE enrollment_year=2024",
 
-    # RANGE
     "SELECT * FROM students WHERE gpa BETWEEN 2.5 AND 3.5",
     "SELECT * FROM students WHERE student_id BETWEEN 100 AND 1000",
 
-    # SORT
     "SELECT * FROM students ORDER BY gpa DESC LIMIT 100",
     "SELECT * FROM students ORDER BY first_name LIMIT 50",
 
-    # GROUP BY
     "SELECT dept_id, AVG(gpa) FROM students GROUP BY dept_id",
     "SELECT city, COUNT(*) FROM students GROUP BY city",
     "SELECT grade, COUNT(*) FROM enrollments GROUP BY grade",
 
-    # JOINS
     """
     SELECT s.first_name, e.grade
     FROM students s
@@ -121,38 +116,63 @@ df.to_csv("dataset.csv", index=False)
 print("Dataset saved.")
 
 # ==================================================
+# QUERY TYPE (for hybrid model)
+# ==================================================
+df["query_type"] = df["joins"].apply(
+    lambda x: "simple" if x <= 1 else ("medium" if x <= 3 else "complex")
+)
+
+# ==================================================
 # FEATURES / TARGET
 # ==================================================
 
-X = df[["joins", "where", "groupby", "orderby", "length"]]
+features = ["joins", "where", "groupby", "orderby", "length"]
+
+X = df[features]
 y = df["runtime_ms"]
+
+# ==================================================
+# SMALL DATA EXPERIMENT
+# ==================================================
 
 train_sizes = [50, 100, 200, 300, 500]
 
 for size in train_sizes:
 
+    mae_list = []
+    r2_list = []
+
+    for run in range(5):
+
+        df_sample = df.sample(n=size)
+
+        X_sample = df_sample[features]
+        y_sample = df_sample["runtime_ms"]
+
+        X_train, X_test, y_train, y_test = train_test_split(
+            X_sample, y_sample, test_size=0.2
+        )
+
+        model = RandomForestRegressor(n_estimators=100)
+        model.fit(X_train, y_train)
+
+        pred = model.predict(X_test)
+
+        mae_list.append(mean_absolute_error(y_test, pred))
+        r2_list.append(r2_score(y_test, pred))
+
     print("====================================")
     print("Training Size:", size)
+    print("Avg MAE:", round(sum(mae_list)/5, 3))
+    print("Avg R2 :", round(sum(r2_list)/5, 3))
 
-    df_sample = df.sample(n=size, random_state=42)
+# ==================================================
+# FINAL TRAIN
+# ==================================================
 
-    X_sample = df_sample[["joins", "where", "groupby", "orderby", "length"]]
-    y_sample = df_sample["runtime_ms"]
-
-    X_train, X_test, y_train, y_test = train_test_split(
-        X_sample, y_sample, test_size=0.2, random_state=42
-    )
-
-    model = RandomForestRegressor(n_estimators=100, random_state=42)
-    model.fit(X_train, y_train)
-
-    pred = model.predict(X_test)
-
-    mae = mean_absolute_error(y_test, pred)
-    r2 = r2_score(y_test, pred)
-
-    print("MAE:", round(mae, 3))
-    print("R2 :", round(r2, 3))
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42
+)
 
 # ==================================================
 # MODELS
@@ -161,14 +181,8 @@ for size in train_sizes:
 models = {
     "Linear Regression": LinearRegression(),
     "Decision Tree": DecisionTreeRegressor(random_state=42),
-    "Random Forest": RandomForestRegressor(
-        n_estimators=100,
-        random_state=42
-    ),
-    "Gradient Boosting": GradientBoostingRegressor(
-        n_estimators=100,
-        random_state=42
-    )
+    "Random Forest": RandomForestRegressor(n_estimators=100, random_state=42),
+    "Gradient Boosting": GradientBoostingRegressor(n_estimators=100, random_state=42)
 }
 
 results = []
@@ -185,42 +199,29 @@ for name, model in models.items():
 
     mae = mean_absolute_error(y_test, pred)
     r2 = r2_score(y_test, pred)
+    rmse = np.sqrt(mean_squared_error(y_test, pred))
 
-    results.append([name, mae, r2])
+    results.append([name, mae, r2, rmse])
 
     print("================================")
     print(name)
-    print("MAE:", round(mae, 3))
-    print("R2 :", round(r2, 3))
+    print("MAE :", round(mae, 3))
+    print("R2  :", round(r2, 3))
+    print("RMSE:", round(rmse, 3))
 
-if r2 > best_r2:
-    best_r2 = r2
-    best_model = model
-    best_name = name
-    best_pred = pred
-
-# AFTER loop ends, print feature importance safely
-print("================================")
-print("Best Model:", best_name)
-
-if hasattr(best_model, "feature_importances_"):
-    print("Feature Importance:")
-    features = ["joins", "where", "groupby", "orderby", "length"]
-    importances = best_model.feature_importances_
-
-    for f, imp in zip(features, importances):
-        print(f, ":", round(imp, 3))
-
+    if r2 > best_r2:
+        best_r2 = r2
+        best_model = model
         best_name = name
         best_pred = pred
 
 # ==================================================
-# SAVE MODEL RESULTS CSV
+# SAVE RESULTS
 # ==================================================
 
 results_df = pd.DataFrame(
     results,
-    columns=["Model", "MAE", "R2"]
+    columns=["Model", "MAE", "R2", "RMSE"]
 )
 
 results_df.to_csv("model_results.csv", index=False)
@@ -229,52 +230,123 @@ print("================================")
 print("Best Model:", best_name)
 
 # ==================================================
-# GRAPH 1: ACTUAL VS PREDICTED
+# HYBRID MODEL (SQP-HybridBoost)
+# ==================================================
+
+print("\n================================")
+print("SQP-HybridBoost (Hybrid Model)")
+print("================================")
+
+models_hybrid = {
+    "simple": DecisionTreeRegressor(random_state=42),
+    "medium": RandomForestRegressor(n_estimators=100, random_state=42),
+    "complex": GradientBoostingRegressor(n_estimators=100, random_state=42)
+}
+
+hybrid_models = {}
+
+# Train separate models per query type
+for q_type in ["simple", "medium", "complex"]:
+
+    df_sub = df[df["query_type"] == q_type]
+
+    if len(df_sub) < 10:
+        print(f"Skipping {q_type}: not enough samples ({len(df_sub)})")
+        continue
+
+    X_sub = df_sub[features]
+    y_sub = df_sub["runtime_ms"]
+
+    X_tr, X_te, y_tr, y_te = train_test_split(
+        X_sub, y_sub, test_size=0.2, random_state=42
+    )
+
+    model = models_hybrid[q_type]
+    model.fit(X_tr, y_tr)
+
+    hybrid_models[q_type] = model
+
+    print(f"{q_type} model trained (samples: {len(df_sub)})")
+
+
+def hybrid_predict(row):
+    q_type = row["query_type"]
+
+    if q_type in hybrid_models:
+        model = hybrid_models[q_type]
+        return model.predict(pd.DataFrame([row[features]]))[0]
+    else:
+        return best_model.predict(pd.DataFrame([row[features]]))[0]
+
+# Prepare test set with query_type
+df_test = X_test.copy()
+df_test["runtime_ms"] = y_test.values
+df_test["query_type"] = df_test["joins"].apply(
+    lambda x: "simple" if x <= 1 else ("medium" if x <= 3 else "complex")
+)
+
+# Predictions
+hybrid_preds = df_test.apply(hybrid_predict, axis=1)
+
+# Metrics
+hybrid_mae = mean_absolute_error(df_test["runtime_ms"], hybrid_preds)
+hybrid_r2 = r2_score(df_test["runtime_ms"], hybrid_preds)
+hybrid_rmse = np.sqrt(mean_squared_error(df_test["runtime_ms"], hybrid_preds))
+
+print("\n================================")
+print("Hybrid Model Results")
+print("MAE :", round(hybrid_mae, 3))
+print("R2  :", round(hybrid_r2, 3))
+print("RMSE:", round(hybrid_rmse, 3))
+
+# Add hybrid results to comparison DataFrame and save
+results_df.loc[len(results_df)] = ["SQP-HybridBoost", hybrid_mae, hybrid_r2, hybrid_rmse]
+results_df.to_csv("model_results.csv", index=False)
+
+# ==================================================
+# FEATURE IMPORTANCE
+# ==================================================
+
+if hasattr(best_model, "feature_importances_"):
+
+    importance = best_model.feature_importances_
+
+    print("Feature Importance:")
+    for f, imp in zip(features, importance):
+        print(f, ":", round(imp, 3))
+
+    plt.figure(figsize=(8,5))
+    plt.bar(features, importance)
+    plt.title("Feature Importance")
+    plt.savefig("feature_importance.png")
+    plt.close()
+
+# ==================================================
+# GRAPH 1
 # ==================================================
 
 plt.figure(figsize=(8,5))
 plt.scatter(y_test, best_pred)
 plt.xlabel("Actual Runtime (ms)")
 plt.ylabel("Predicted Runtime (ms)")
-plt.title("Best Model: Actual vs Predicted")
-plt.tight_layout()
+plt.title("Prediction")
 plt.savefig("results.png")
 plt.close()
 
 # ==================================================
-# GRAPH 2: MODEL COMPARISON
+# GRAPH 2
 # ==================================================
 
 plt.figure(figsize=(8,5))
 plt.bar(results_df["Model"], results_df["R2"])
-plt.xticks(rotation=20)
-plt.ylabel("R2 Score")
 plt.title("Model Comparison")
-plt.tight_layout()
 plt.savefig("model_comparison.png")
 plt.close()
-
-# ==================================================
-# GRAPH 3: FEATURE IMPORTANCE
-# ==================================================
-
-if hasattr(best_model, "feature_importances_"):
-
-    importance = best_model.feature_importances_
-    features = X.columns
-
-    plt.figure(figsize=(8,5))
-    plt.bar(features, importance)
-    plt.title("Feature Importance")
-    plt.ylabel("Importance")
-    plt.tight_layout()
-    plt.savefig("feature_importance.png")
-    plt.close()
 
 print("All graphs saved.")
 
 # ==================================================
-# CLOSE CONNECTION
+# CLOSE
 # ==================================================
 
 cursor.close()
