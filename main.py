@@ -127,9 +127,32 @@ print("Dataset saved.")
 X = df[["joins", "where", "groupby", "orderby", "length"]]
 y = df["runtime_ms"]
 
-X_train, X_test, y_train, y_test = train_test_split(
-    X, y, test_size=0.20, random_state=42
-)
+train_sizes = [50, 100, 200, 300, 500]
+
+for size in train_sizes:
+
+    print("====================================")
+    print("Training Size:", size)
+
+    df_sample = df.sample(n=size, random_state=42)
+
+    X_sample = df_sample[["joins", "where", "groupby", "orderby", "length"]]
+    y_sample = df_sample["runtime_ms"]
+
+    X_train, X_test, y_train, y_test = train_test_split(
+        X_sample, y_sample, test_size=0.2, random_state=42
+    )
+
+    model = RandomForestRegressor(n_estimators=100, random_state=42)
+    model.fit(X_train, y_train)
+
+    pred = model.predict(X_test)
+
+    mae = mean_absolute_error(y_test, pred)
+    r2 = r2_score(y_test, pred)
+
+    print("MAE:", round(mae, 3))
+    print("R2 :", round(r2, 3))
 
 # ==================================================
 # MODELS
@@ -170,9 +193,24 @@ for name, model in models.items():
     print("MAE:", round(mae, 3))
     print("R2 :", round(r2, 3))
 
-    if r2 > best_r2:
-        best_r2 = r2
-        best_model = model
+if r2 > best_r2:
+    best_r2 = r2
+    best_model = model
+    best_name = name
+    best_pred = pred
+
+# AFTER loop ends, print feature importance safely
+print("================================")
+print("Best Model:", best_name)
+
+if hasattr(best_model, "feature_importances_"):
+    print("Feature Importance:")
+    features = ["joins", "where", "groupby", "orderby", "length"]
+    importances = best_model.feature_importances_
+
+    for f, imp in zip(features, importances):
+        print(f, ":", round(imp, 3))
+
         best_name = name
         best_pred = pred
 
