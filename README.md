@@ -152,6 +152,5 @@ This project is licensed under the MIT License.
 
 ## 👨‍💻 Author
 
-Mohammad Sohail Saleem
-Ali
+Mohammad Sohail Saleem & Ali
 Computer Science Students
