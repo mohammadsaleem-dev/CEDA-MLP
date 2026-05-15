@@ -1,156 +1,284 @@
-# Machine Learning-Based SQL Query Performance Prediction for Small Databases
+# CEDA-MLP: Correlation-Aware Cardinality Estimation Using Deep Neural Networks for Skewed Database Workloads
 
-## 📌 Overview
+## Overview
 
-This project presents a lightweight machine learning framework for predicting SQL query execution time in small database environments. The system extracts structural features from SQL queries and uses multiple machine learning models to estimate query runtime efficiently.
+CEDA-MLP (Correlation-Enhanced Deep Architecture for Multi-Layer Perceptron) is a machine learning-based cardinality estimation framework designed to improve SQL query optimization under correlated and skewed database workloads.
 
-The goal is to provide accurate performance prediction without requiring large datasets or complex database profiling tools.
+Traditional database systems such as PostgreSQL rely on histogram-based estimators that assume attribute independence, often producing severe estimation errors for complex multi-join queries. CEDA-MLP introduces a correlation-aware neural architecture that significantly improves tail-error robustness and query execution efficiency.
 
----
-
-## 🚀 Features
-
-* Predicts SQL query execution time using machine learning
-* Works effectively with **small datasets**
-* Supports multiple models:
-
-  * Linear Regression
-  * Decision Tree
-  * Random Forest
-  * Gradient Boosting
-* Includes **model comparison and evaluation**
-* Provides **feature importance analysis**
-* Implements a **hybrid model (SQP-HybridBoost)** based on query complexity
-* Generates visualizations:
-
-  * Model comparison
-  * Prediction accuracy
-  * Feature importance
+This project evaluates PostgreSQL, an Independent MLP baseline, and the proposed CEDA-MLP model using the TPC-H benchmark.
 
 ---
 
-## 🧠 Key Contributions
+# Key Features
 
-* Demonstrates that accurate prediction is possible with **limited data**
-* Shows that SQL query performance is **non-linear**
-* Identifies **JOIN operations as the most influential factor**
-* Proposes a hybrid model and analyzes its performance under real conditions
+* Correlation-aware cardinality estimation
+* PostgreSQL workload integration
+* TPC-H benchmark evaluation
+* Q-error analysis and comparison
+* Query execution time benchmarking
+* Tail-error robustness improvements
+* Lightweight neural network deployment
+* Execution-time speedup evaluation
+* Automated feature engineering pipeline
+* Visualization and chart generation
 
 ---
 
-## 🛠️ Technologies Used
+# Final Experimental Results
 
-* Python 3
-* MySQL
-* Pandas
+## Q-Error Comparison
+
+| Method                     | Median Q-Error | 90th Percentile | 95th Percentile | Worst-Case |
+| -------------------------- | -------------- | --------------- | --------------- | ---------- |
+| PostgreSQL (histogram)     | 1.55×          | 73.00×          | 188.05×         | 319.00×    |
+| Independent MLP (no corr.) | 1.14×          | 12.69×          | 23.43×          | 1424.49×   |
+| CEDA-MLP (proposed)        | 1.08×          | 4.27×           | 8.28×           | 98.20×     |
+
+## Execution Time Results
+
+| Query                 | PostgreSQL (s) | Indep. MLP (s) | CEDA-MLP (s) | Speedup |
+| --------------------- | -------------- | -------------- | ------------ | ------- |
+| Simple Predicate      | 0.30           | 0.26           | 0.23         | 1.30×   |
+| Correlated Orders     | 0.25           | 0.22           | 0.19         | 1.32×   |
+| Customer-Orders Join  | 1.01           | 0.88           | 0.77         | 1.31×   |
+| Correlated Lineitem   | 1.16           | 1.01           | 0.88         | 1.32×   |
+| Multi-Join Skewed     | 2.17           | 1.89           | 1.65         | 1.32×   |
+| High-Selectivity Join | 0.59           | 0.51           | 0.45         | 1.31×   |
+| Average               | 0.91           | 0.80           | 0.70         | 1.30×   |
+
+---
+
+# Architecture
+
+CEDA-MLP uses:
+
+* Correlation-aware feature engineering
+* Selectivity analysis
+* Query complexity encoding
+* Join-aware workload modeling
+* Multi-layer perceptron neural networks
+* Tail-error stabilization techniques
+
+Pipeline:
+
+```text
+SQL Query
+   ↓
+Feature Extraction
+   ↓
+Correlation Encoding
+   ↓
+CEDA-MLP Model
+   ↓
+Cardinality Prediction
+   ↓
+Improved Query Optimization
+```
+
+---
+
+# Technologies Used
+
+* Python 3.14
+* PostgreSQL 16
+* scikit-learn
+* pandas
 * NumPy
-* Scikit-learn
-* Matplotlib
+* matplotlib
+* psycopg2
+* TPC-H Benchmark
+* VS Code
+* Ubuntu / Windows
 
 ---
 
-## 🗄️ Dataset
+# Project Structure
 
-The dataset is generated dynamically by executing SQL queries on a MySQL database.
-
-Each record includes:
-
-* Number of JOIN operations
-* Presence of WHERE clause
-* GROUP BY usage
-* ORDER BY usage
-* Query length
-* Execution time (ms)
-
----
-
-## ⚙️ How It Works
-
-1. Generate SQL queries with varying complexity
-2. Execute queries on MySQL database
-3. Measure execution time
-4. Extract query features
-5. Train machine learning models
-6. Evaluate performance using:
-
-   * MAE (Mean Absolute Error)
-   * RMSE (Root Mean Squared Error)
-   * R² Score
-
----
-
-## 📊 Results Summary
-
-* Best model: **Tree-based models (Random Forest / Gradient Boosting)**
-* Achieved high accuracy:
-
-  * R² ≈ 0.95 – 0.97
-* Hybrid model (SQP-HybridBoost):
-
-  * Demonstrated that performance depends on data distribution
-  * Highlighted the impact of dataset imbalance
-
----
-
-## 📈 Output Files
-
-The system generates:
-
-* `dataset.csv` → collected data
-* `model_results.csv` → evaluation results
-* `results.png` → predicted vs actual
-* `model_comparison.png` → model performance
-* `feature_importance.png` → feature analysis
-
----
-
-## ▶️ How to Run
-
-1. Ensure MySQL is running
-2. Update database credentials in `main.py`
-3. Install dependencies:
-
-   ```bash
-   pip install pandas numpy scikit-learn matplotlib mysql-connector-python
-   ```
-4. Run the script:
-
-   ```bash
-   python main.py
-   ```
-
----
-
-## 📌 Project Structure
-
-```
-.
-├── main.py
-├── dataset.csv
-├── model_results.csv
-├── results.png
-├── model_comparison.png
-├── feature_importance.png
+```text
+CEDA-MLP/
+│
+├── collect_data.py
+├── improve_dataset_features.py
+├── generate_qerror_table.py
+├── compare_models_corr.py
+├── compare_models_no_corr.py
+├── execution_time_compare.py
+├── cardinality_dataset.csv
+├── cardinality_dataset_improved.csv
+├── qerror_comparison_table.csv
+├── execution_time_results.csv
+├── model_comparison_corr.csv
+├── charts/
+├── figures/
 ├── README.md
+└── requirements.txt
 ```
 
 ---
 
-## 📖 Future Work
+# Installation
 
-* Use larger and more diverse datasets
-* Improve hybrid model with balanced data
-* Integrate real-time query optimization systems
+## 1. Clone Repository
+
+```bash
+git clone https://github.com/yourusername/CEDA-MLP.git
+cd CEDA-MLP
+```
+
+## 2. Create Virtual Environment
+
+```bash
+python -m venv venv
+```
+
+## 3. Activate Environment
+
+### Windows
+
+```powershell
+venv\Scripts\activate
+```
+
+### Linux / Ubuntu
+
+```bash
+source venv/bin/activate
+```
+
+## 4. Install Dependencies
+
+```bash
+pip install -r requirements.txt
+```
 
 ---
 
-## 📜 License
+# PostgreSQL Setup
 
-This project is licensed under the MIT License.
+Install PostgreSQL and load the TPC-H benchmark database.
+
+Update database credentials inside:
+
+```python
+collect_data.py
+```
+
+Example:
+
+```python
+conn = psycopg2.connect(
+    host="localhost",
+    database="tpch",
+    user="postgres",
+    password="YOUR_PASSWORD"
+)
+```
 
 ---
 
-## 👨‍💻 Author
+# Running the Project
 
-Mohammad Sohail Saleem & Ali
-Computer Science Students
+## Step 1 — Collect Query Workload Data
+
+```bash
+python collect_data.py
+```
+
+## Step 2 — Generate Additional Features
+
+```bash
+python improve_dataset_features.py
+```
+
+## Step 3 — Generate Q-Error Results
+
+```bash
+python generate_qerror_table.py
+```
+
+## Step 4 — Compare Models
+
+```bash
+python compare_models_corr.py
+```
+
+```bash
+python compare_models_no_corr.py
+```
+
+## Step 5 — Execution-Time Benchmarking
+
+```bash
+python execution_time_compare.py
+```
+
+---
+
+# Research Contributions
+
+* Introduced a lightweight correlation-aware cardinality estimation framework
+* Reduced catastrophic estimation failures on skewed workloads
+* Improved tail-error robustness significantly
+* Achieved lower query execution time than PostgreSQL and Independent MLP
+* Demonstrated practical ML integration for database query optimization
+
+---
+
+# Limitations
+
+* Current implementation models pairwise correlations only
+* Requires retraining under heavy workload drift
+* Evaluated primarily on TPC-H Scale Factor 1
+* Not yet generalized to schema-independent learning
+
+---
+
+# Future Work
+
+* Transformer-based query encoders
+* Graph Neural Networks for join modeling
+* Online adaptive learning
+* Distributed database optimization
+* Higher-order correlation modeling
+* Larger benchmark evaluation (TPC-DS / JOB)
+
+---
+
+# Citation
+
+If you use this project in research, please cite:
+
+```bibtex
+@article{CEDAMLP2026,
+  title={CEDA-MLP: Correlation-Aware Cardinality Estimation Using Deep Neural Networks for Skewed Database Workloads},
+  author={Mohammad Sohail Saleem and Ali Abu Foudeh},
+  year={2026}
+}
+```
+
+---
+
+# Authors
+
+## Mohammad Sohail Saleem
+
+Princess Sumaya University for Technology
+M.S. Computer Science
+
+## Ali Abu Foudeh
+
+Princess Sumaya University for Technology
+M.S. Computer Science
+
+---
+
+# License
+
+This project is intended for academic and research purposes.
+
+---
+
+# Acknowledgment
+
+This research was conducted as part of the Master of Science program in Computer Science at Princess Sumaya University for Technology (PSUT).
