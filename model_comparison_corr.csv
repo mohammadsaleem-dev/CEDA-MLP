@@ -1,0 +1,6 @@
+Model,MAE,R2,Training Time (s),Model Size (MB),Inference Latency (ms)
+Linear Regression,107101.572,0.962445,0.0,0.0,0.0004
+Decision Tree,309.201,0.999994,0.02,0.25,0.0005
+Random Forest,342.734,0.999997,1.07,19.94,0.0105
+Gradient Boosting,7709.23,0.999486,0.49,0.14,0.0013
+MLP Regressor,21162.416,0.996981,3.54,0.09,0.0009

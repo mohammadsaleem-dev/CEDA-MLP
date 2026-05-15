@@ -1,0 +1,4 @@
+Method,Median Q-Error,90th Pct.,95th Pct.,Worst-Case
+PostgreSQL (histogram),1.55,73.0,188.05,319.0
+Independent MLP (no corr.),1.14,12.69,23.43,1424.49
+CEDA-MLP (proposed),1.08,4.27,8.28,98.2
